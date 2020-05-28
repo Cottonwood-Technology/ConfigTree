@@ -1,0 +1,28 @@
+language: python
+
+matrix:
+  include:
+    - python: 2.7
+    - python: 3.5
+    - python: 3.6
+    - python: 3.7
+    - python: 3.8
+    - python: pypy
+    - python: pypy3
+
+install:
+- pip install pytest pytest-cov pytest-flakes
+- pip install -e .
+
+script:
+- pytest
+
+deploy:
+  provider: pypi
+  username: "__token__"
+  password:
+    secure: "xGIMWin8KSxjrwOFDNS3I1fye3UgMZU9sSNTPAUqDphaLs/s+rB/YLE9l8fWxMCsvLF4HeccotRhMT5GeKpvRXCABmjQqLxFV+N18HekIVxUbHFg2tQ2qmEuQ/dP9HYEELcYzFvJtNAeROdTvlYs02dotlleU0JpBs7r2De+Y9X8HyX3dYFzh35XbSYith56AcEhowVR0ZVDRP8Ez8jgEMK7jbLTwbTFIpTQbm8NJEQ6qP7LJ5BVWJSeGI/KE/V1LgRsJyMfA1egL0sb9DFZVRSszTFYNHvI8cJLH2DoeDWZgH01OapchmyRtRSynqINu6yMlj7zcUxwJSn+Sr02AcBt1rPXJtKQg3BxWhr6fXmH9U5to+UY9CkTtsTfAKWkyyaaaYP44xrLHzWhcE6UdbMWCA3C7dzUsAfbaWYP/2AwUWOjcNJ1KRAQMprB3SQTgIxoiJAhBp1uAf7IOcJmkkWjLxv9Ffq1JEMCWxudCDWG/4ceOkQC/OBiBBrh2PCgEY7n104HmWVMETFqZsGJ9eUz5rwPtJQUjqBFAChoT4DWqE6Zeq/kF8xxe5/r7AuFe3lBf1SYd4pEVuJPlQ4QrR5bxFzSv9VvTNX33ahcybdGJFyPrnlGLUo9n1Q7Vy7zflei3qkStvFk/u6zJX3Yqy/AE9uc8MWa3XTkqrLUPR4="
+  on:
+    tags: true
+  distributions: "sdist bdist_wheel"
+  skip_existing: true
