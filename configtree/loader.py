@@ -8,7 +8,7 @@ from cached_property import cached_property
 from . import source
 from .compat.types import basestr
 from .tree import Tree, flatten
-
+from itertools import chain
 
 class Loader(object):
     """
@@ -535,6 +535,110 @@ class Updater(Pipeline):
                 getattr(old_value, method)(action.value)
 
         action.update = update
+
+    @Pipeline.worker(40)
+    def add_method(self, action):
+        """
+        Worker that add :attr:`UpdateAction.value` if key contains
+        "+" char.
+
+        It gets original value from :attr:`UpdateAction.tree` and emulate 
+        an add method with :attr:`UpdateAction.value` .
+        If any of the values is instance of :class:`Promise`, then it will be
+        wrapped by another :class:`Promise` object.
+        See :meth:`PostProcessor.resolve_promise`.
+
+        :param UpdateAction action: Current update action object
+
+        ..  attribute:: __priority__ = 40
+
+        Example:
+
+            ..  code-block:: yaml
+
+                bar: "string"                    # bar == "string"
+                bar+: "other"                    # bar == "string other"
+                foo: [1, 2]                      # foo == [1, 2]
+                foo+: [5, 6]                     # foo == [1, 2, 5, 6]
+                foo+: (7, "8")                   # foo == [1, 2, 5, 6, 7, "8"]
+                foo+: "9"                        # foo == [1, 2, 5, 6, 7, "8", "9"]
+                
+
+        """
+        if "+" not in action.key:
+            return
+        action.key = action.key[:-1]
+       
+        def update(action):
+            old_value = action.tree[action.key]
+            if isinstance(old_value, Promise) or isinstance(action.value, Promise):
+
+                def deferred():
+                    new_value = Promise.resolve(old_value)
+                    # None or empty string + anything = anything
+                    if new_value is None or new_value=='':
+                        return Promise.resolve(action.value)
+                    # Non empty string + anything = "string string"
+                    elif isinstance(new_value, basestr):
+                        return new_value + " " + str(Promise.resolve(action.value))
+                    else:
+                        try:
+                            iterator = iter(new_value)
+                        except TypeError:
+                            # not iterable
+                            try:
+                                # trying + operator
+                                return new_value + Promise.resolve(action.value)
+                            except TypeError:
+                                # fallback to concatenate string
+                                return str(new_value) + " " + str(Promise.resolve(action.value))
+                        else:
+                            action.value = Promise.resolve(action.value)
+                            if isinstance(action.value, basestr):
+                                action.value = [action.value]
+                            try:
+                                iterator2 = iter(action.value)
+                            except:
+                                action.value = [action.value]
+                                iterator2 = iter(action.value)
+                            # Iterable + iterable = merged iterables
+                            return type(new_value)(chain(iterator, iterator2))
+
+
+                action.tree[action.key] = action.promise(deferred)        
+
+
+            else:
+                # None or empty string + anything = anything
+                if old_value is None or old_value=='':
+                    action.tree[action.key] = action.value
+                # Non empty string + anything = "string string"
+                elif isinstance(old_value, basestr):
+                    action.tree[action.key] = old_value + " " + str(action.value)
+                else:
+                    try:
+                        iterator = iter(old_value)
+                    except TypeError:
+                        # not iterable
+                        try:
+                            # trying + operator
+                            action.tree[action.key] = old_value + action.value
+                        except TypeError:
+                            # fallback to concatenate string
+                            action.tree[action.key] = str(old_value) + " " + str(action.value)
+                    else:
+                        if isinstance(action.value, basestr):
+                            action.value = [action.value]
+                        try:
+                            iterator2 = iter(action.value)
+                        except:
+                            action.value = [action.value]
+                            iterator2 = iter(action.value)
+                        # Iterable + iterable = merged iterables
+                        action.tree[action.key] = type(action.tree[action.key])(chain(iterator, iterator2))
+
+        action.update = update
+
 
     @Pipeline.worker(50)
     def format_value(self, action):

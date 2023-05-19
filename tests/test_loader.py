@@ -232,8 +232,9 @@ def test_loader_set_default_tree():
 
 
 def test_updater_call_method():
-    tree = Tree({"foo": []})
     update = Updater()
+
+    tree = Tree({"foo": []})
     update(tree, "foo#append", 1, "/test/source.yaml")
     assert tree["foo"] == [1]
 
@@ -245,6 +246,149 @@ def test_updater_call_method():
     assert isinstance(tree["foo"], Promise)
     assert tree["foo"](), [1, 2, 3]
 
+    tree = Tree({"foo": []})
+    update(tree, "foo#extend", [1], "/test/source.yaml")
+    assert tree["foo"] == [1]
+
+    update(tree, "foo#extend", [2, 3], "/test/source.yaml")
+    assert tree["foo"] == [1, 2, 3]
+
+    update(tree, "foo#extend", ">>> [4]", "/test/source.yaml")
+    assert isinstance(tree["foo"], Promise)
+    assert tree["foo"]() == [1, 2, 3, 4]
+
+    
+def test_updater_add_method():
+    update = Updater()
+    
+    tree = Tree({"foo": None})
+    update(tree, "foo+", 1, "/test/source.yaml")
+    assert tree["foo"] == 1
+
+    tree = Tree({"foo": None})
+    update(tree, "foo+", "1", "/test/source.yaml")
+    assert tree["foo"] == "1"
+
+    tree = Tree({"foo": None})
+    update(tree, "foo+", (1), "/test/source.yaml")
+    assert tree["foo"] == (1)
+
+    tree = Tree({"foo": None})
+    update(tree, "foo+", [1], "/test/source.yaml")
+    assert tree["foo"] == [1]
+
+    tree = Tree({"foo": ""})
+    update(tree, "foo+", "1", "/test/source.yaml")
+    assert tree["foo"] == "1"
+
+    update(tree, "foo+", "[2]", "/test/source.yaml")
+    assert tree["foo"] == "1 [2]"
+
+    update(tree, "foo+", "3 4", "/test/source.yaml")
+    assert tree["foo"] == "1 [2] 3 4"
+
+
+    tree = Tree({"foo": ""})
+    update(tree, "foo+", [1], "/test/source.yaml")
+    assert tree["foo"] == [1]
+
+    update(tree, "foo+", [2], "/test/source.yaml")
+    assert tree["foo"] == [1, 2]
+
+    update(tree, "foo+", 3, "/test/source.yaml")
+    assert tree["foo"] == [1, 2, 3]
+
+    update(tree, "foo+", "4", "/test/source.yaml")
+    assert tree["foo"] == [1, 2, 3, '4']
+
+    update(tree, "foo+", [5,6] , "/test/source.yaml")
+    assert tree["foo"] == [1, 2, 3, '4', 5, 6]
+
+
+    tree = Tree({"foo": ()})
+    update(tree, "foo+", (1), "/test/source.yaml")
+    assert tree["foo"] == (1,)
+
+    update(tree, "foo+", (2), "/test/source.yaml")
+    assert tree["foo"] == (1, 2)
+
+    update(tree, "foo+", "3 4", "/test/source.yaml")
+    assert tree["foo"] == (1, 2, "3 4")
+
+    update(tree, "foo+", [5], "/test/source.yaml")
+    assert tree["foo"] == (1, 2, "3 4", 5)
+
+    update(tree, "foo+", ["6","7"], "/test/source.yaml")
+    assert tree["foo"] == (1, 2, "3 4", 5, "6", "7")
+
+    update(tree, "foo+", [["8","9"]], "/test/source.yaml")
+    assert tree["foo"] == (1, 2, "3 4", 5, "6", "7", ["8","9"])
+
+    update(tree, "foo+", 10, "/test/source.yaml")
+    assert tree["foo"] == (1, 2, "3 4", 5, "6", "7", ["8","9"], 10)
+
+
+    tree = Tree({"foo": []})
+    update(tree, "foo+", ">>> [1]", "/test/source.yaml")
+    assert isinstance(tree["foo"], Promise)
+    assert tree["foo"]() == [1]
+
+    update(tree, "foo+", 2, "/test/source.yaml")
+    assert isinstance(tree["foo"], Promise)
+    assert tree["foo"]() == [1, 2]
+
+    update(tree, "foo+", (3, "4"), "/test/source.yaml")
+    assert isinstance(tree["foo"], Promise)
+    assert tree["foo"]() == [1, 2, 3, "4"]
+
+
+    tree = Tree({"foo": []})
+    update(tree, "foo+", 1, "/test/source.yaml")
+    assert tree["foo"] == [1]
+
+    update(tree, "foo+", ">>> 2", "/test/source.yaml")
+    assert isinstance(tree["foo"], Promise)
+    assert tree["foo"]() == [1, 2]
+
+    update(tree, "foo+", ">>> [3, 4]", "/test/source.yaml")
+    assert isinstance(tree["foo"], Promise)
+    assert tree["foo"]() == [1, 2, 3, 4]
+
+    update(tree, "foo+", ">>> ('5', 6)", "/test/source.yaml")
+    assert isinstance(tree["foo"], Promise)
+    assert tree["foo"]() == [1, 2, 3, 4, "5", 6]
+
+
+    tree = Tree({"foo": []})
+    update(tree, "foo+", "", "/test/source.yaml")
+    assert tree["foo"] == ['']
+
+    tree = Tree({"foo": ""})
+    update(tree, "foo+", "first", "/test/source.yaml")
+    assert tree["foo"] == "first"
+    
+    update(tree, "foo+", "second", "/test/source.yaml")
+    assert tree["foo"] == "first second"
+
+    update(tree, "foo+", [3], "/test/source.yaml")
+    assert tree["foo"] == "first second [3]"
+    
+    update(tree, "foo+", "%>> 4 and 5", "/test/source.yaml")
+    assert isinstance(tree["foo"], Promise)
+    assert tree["foo"]() == "first second [3] 4 and 5"
+
+
+    tree = Tree({"foo": 1})
+    update(tree, "foo+", 2, "/test/source.yaml")
+    assert tree["foo"] == 3
+    
+    update(tree, "foo+", ">>> 6", "/test/source.yaml")
+    assert isinstance(tree["foo"], Promise)
+    assert tree["foo"]() == 9
+
+    update(tree, "foo+", "10", "/test/source.yaml")
+    assert isinstance(tree["foo"], Promise)
+    assert tree["foo"]() == "9 10"
 
 def test_updater_format_value():
     tree = Tree({"x.a": 1, "x.b": 2})
