@@ -287,6 +287,9 @@ def test_updater_add_method():
     update(tree, "foo+", "3 4", "/test/source.yaml")
     assert tree["foo"] == "1 [2] 3 4"
 
+    tree = Tree({})
+    update(tree, "foo+", "1", "/test/source.yaml")
+    assert tree["foo"] == "1"
 
     tree = Tree({"foo": ""})
     update(tree, "foo+", [1], "/test/source.yaml")

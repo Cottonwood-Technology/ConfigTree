@@ -570,7 +570,10 @@ class Updater(Pipeline):
         action.key = action.key[:-1]
        
         def update(action):
-            old_value = action.tree[action.key]
+            if action.key in action.tree:
+                old_value = action.tree[action.key]
+            else:
+                old_value = None
             if isinstance(old_value, Promise) or isinstance(action.value, Promise):
 
                 def deferred():
